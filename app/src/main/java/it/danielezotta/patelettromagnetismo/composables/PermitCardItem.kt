@@ -31,11 +31,12 @@ import it.danielezotta.patelettromagnetismo.models.ApiAlboEntry
 
 
 enum class CompanyColor(val color: Color) {
-    TIM(Color(0x803949AB)), // Red
-    VODAFONE(Color(0x80D60094)), // Vodafone Red
-    WINDTRE(Color(0x80FB8C00)), // Orange
+    TIM(Color(0x800033a1)), // Blue
+    VODAFONE(Color(0x80E60000)), // Vodafone Red
+    WINDTRE(Color(0x80FF6600)), // Orange
     EOLO(Color(0x8000AEEF)), // Light Blue
-    ILIAD(Color(0x80FF0000)), // Red
+    ILIAD(Color(0x80D52B1E)), // Red
+    ZEFIRO(Color(0x804ccbda)), // Light Blue)
     GENERIC(Color(0x80808080)); // Default Gray
 
     companion object {
@@ -46,6 +47,7 @@ enum class CompanyColor(val color: Color) {
                 company.lowercase().contains("windtre") -> WINDTRE
                 company.lowercase().contains("eolo") -> EOLO
                 company.lowercase().contains("iliad") -> ILIAD
+                company.lowercase().contains("zefiro") -> ZEFIRO
                 else -> GENERIC
             }
         }
