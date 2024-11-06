@@ -24,7 +24,7 @@ fun PermitList(mainViewModel: MainViewModel) {
     var loadingState = mainViewModel.loadingState.collectAsState()
 
     LazyColumn (
-        modifier = Modifier.padding(8.dp),
+        modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 0.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(permits.value) { permit ->

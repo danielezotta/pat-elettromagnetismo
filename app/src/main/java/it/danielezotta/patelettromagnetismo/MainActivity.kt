@@ -1,5 +1,13 @@
 package it.danielezotta.patelettromagnetismo
 
+import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,9 +42,43 @@ class MainActivity : ComponentActivity() {
 
     lateinit var mainViewModel: MainViewModel
 
+    val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+                val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (downloadId != -1L) {
+                    val downloadManager = context.getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                    val uri: Uri? = downloadManager.getUriForDownloadedFile(downloadId)
+
+                    if (uri != null) {
+                        val openIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.oasis.opendocument.text")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(openIntent)
+                    }
+                }
+            }
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                onDownloadComplete,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                RECEIVER_EXPORTED
+            )
+        } else {
+            @SuppressLint("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(
+                onDownloadComplete,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            )
+        }
 
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
