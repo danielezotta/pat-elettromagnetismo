@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun scheduleNotificationWork(context: Context, intervalHours: Long) {
-        val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(16, TimeUnit.MINUTES)
+        val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(intervalHours, TimeUnit.HOURS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
