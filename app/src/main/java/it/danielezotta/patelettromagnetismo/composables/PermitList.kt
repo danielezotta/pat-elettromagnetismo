@@ -3,12 +3,16 @@ package it.danielezotta.patelettromagnetismo.composables
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
@@ -30,7 +34,7 @@ fun PermitList(mainViewModel: MainViewModel) {
         items(permits.value) { permit ->
             PermitCardItem(permit)
 
-            if (permits.value.last() == permit) {
+            if (permits.value.last() == permit && loadingState.value == MainViewModel.LoadingState.LOADED) {
                 mainViewModel.loadMorePermits()
             }
         }
@@ -42,6 +46,26 @@ fun PermitList(mainViewModel: MainViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(loadingState.value == MainViewModel.LoadingState.ERROR) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column (
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Errore durante il caricamento", style = MaterialTheme.typography.bodySmall)
+                        Text("La richiesta ha superato il tempo massimo di attesa", style = MaterialTheme.typography.bodySmall)
+
+                        Button(onClick = { mainViewModel.getPermits() }) {
+                            Text("Riprova")
+                        }
+                    }
                 }
             }
         }
