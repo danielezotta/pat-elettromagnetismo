@@ -1,5 +1,10 @@
 package it.danielezotta.patelettromagnetismo.viewmodels
 
+import android.app.Application
+import androidx.datastore.dataStore
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.ktor.client.HttpClient
@@ -16,6 +21,7 @@ import io.ktor.http.ContentType.Application.FormUrlEncoded
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.KotlinxSerializationConverter
+import it.danielezotta.patelettromagnetismo.dataStore
 import it.danielezotta.patelettromagnetismo.models.ApiAlboEntry
 import it.danielezotta.patelettromagnetismo.models.ApiResponse
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +32,7 @@ import kotlinx.serialization.json.Json
 val PERMITS_URL =
     "http://www.territorio.provincia.tn.it/gcopresenter/play.json?task=ajaxCall&_ajaxCall=%3Ftask%3DgetDvResultSet_Q%26__namespace%3Dpns8_Q%26__idDV%3DDV_A_ALBO_Q%26__USERLANGUAGE%3Dit_Q%26__inputParameterName%3D_Q%26__isPopUp%3Dfalse_Q%26_dataRilascioDa%3D_Q%26_dataRilascioA%3D_Q%26_numDetermina%3D_Q%26_oggettoStr%3D_Q%26_area%3D50_Q%26_tema%3D_Q%26_impresaStr%3D_Q%26_comune%3D_Q%26_stato%3D"
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var _permits = MutableStateFlow(listOf<ApiAlboEntry>())
     val permits = _permits.asStateFlow()
@@ -43,33 +49,48 @@ class MainViewModel : ViewModel() {
 
         viewModelScope.launch {
 
-            val client = HttpClient(CIO) {
-                install(HttpTimeout) {
-                    requestTimeoutMillis = 120000
-                }
-                install(ContentNegotiation) {
-                    register(
-                        ContentType.Text.Any, KotlinxSerializationConverter(
-                            Json {
-                                prettyPrint = true
-                                isLenient = true
-                                ignoreUnknownKeys = true
-                            }
+            try {
+
+                val client = HttpClient(CIO) {
+                    install(HttpTimeout) {
+                        requestTimeoutMillis = 120000
+                    }
+                    install(ContentNegotiation) {
+                        register(
+                            ContentType.Text.Any, KotlinxSerializationConverter(
+                                Json {
+                                    prettyPrint = true
+                                    isLenient = true
+                                    ignoreUnknownKeys = true
+                                }
+                            )
                         )
-                    )
+                    }
                 }
+
+                var response: ApiResponse = client.post(PERMITS_URL + "&page=${_page.value}") {
+                    contentType(ContentType.Application.FormUrlEncoded)
+                    setBody(FormDataContent(Parameters.build {
+
+                    }))
+                }.body()
+
+                _permits.value += response.DV_A_ALBO
+
+                if (!response.DV_A_ALBO.isEmpty()) {
+                    viewModelScope.launch {
+                        getApplication<Application>().applicationContext.dataStore.edit { it ->
+                            it[intPreferencesKey("last_notified_item")] =
+                                response.DV_A_ALBO.maxOfOrNull { it.IDATTO.toInt() } ?: 0
+                        }
+                    }
+                }
+
+                _loadingState.value = LoadingState.LOADED
+
+            } catch (e: Exception) {
+                _loadingState.value = LoadingState.ERROR
             }
-
-            var response: ApiResponse = client.post(PERMITS_URL + "&page=${ _page.value }") {
-                contentType(ContentType.Application.FormUrlEncoded)
-                setBody(FormDataContent(Parameters.build {
-
-                }))
-            }.body()
-
-            _permits.value += response.DV_A_ALBO
-
-            _loadingState.value = LoadingState.LOADED
         }
 
     }

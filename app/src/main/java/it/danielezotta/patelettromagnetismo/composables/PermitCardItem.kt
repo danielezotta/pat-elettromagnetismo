@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -21,6 +22,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -75,39 +77,93 @@ fun PermitCardItem(apiAlboEntry: ApiAlboEntry) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(apiAlboEntry.INDIRIZZO, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Text(apiAlboEntry.COMUNE_INDI, style = MaterialTheme.typography.bodySmall)
-            Text(apiAlboEntry.NOMEIMPRESA, style = MaterialTheme.typography.bodySmall)
-            Text(apiAlboEntry.DATAINIZIOVALIDITA, style = MaterialTheme.typography.bodySmall)
+
+            Row {
+                AnimatedVisibility(expanded.value) {
+                    Text("Comune: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(apiAlboEntry.COMUNE_INDI, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Row {
+                AnimatedVisibility(expanded.value) {
+                    Text("Operatore: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(apiAlboEntry.NOMEIMPRESA, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Row {
+                AnimatedVisibility(expanded.value) {
+                    Text("Inizio validità: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(apiAlboEntry.DATAINIZIOVALIDITA, style = MaterialTheme.typography.bodySmall)
+            }
 
             AnimatedVisibility(
                 expanded.value,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Button(onClick = {
 
-                    val url = "http://www.territorio.provincia.tn.it/gco/downloadFile.down?userFromRequestParam=portalpa&qpportal=true&codCompany=PROV_TN&idAllegato=${ apiAlboEntry.DOCUMENTO }&idAtto=${ apiAlboEntry.IDATTO }"
-                    val request: DownloadManager.Request = DownloadManager.Request(Uri.parse(url))
+                Column {
 
-                    with(request) {
-                        setTitle("${ apiAlboEntry.DOCUMENTO }-${ apiAlboEntry.IDATTO }.odt")
-                        setMimeType("application/vnd.oasis.opendocument.text")
-                        setDescription("Downloading atto...")
-                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        setDestinationInExternalPublicDir(
-                            Environment.DIRECTORY_DOWNLOADS,
-                            "${ apiAlboEntry.DOCUMENTO }-${ apiAlboEntry.IDATTO }.odt"
-                        )
+                    Row {
+                        Text("Documento: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.DOCUMENTO == "") "-" else apiAlboEntry.DOCUMENTO, style = MaterialTheme.typography.bodySmall)
                     }
 
-                    val manager: DownloadManager =
-                        localContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                    manager.enqueue(request)
+                    Row {
+                        Text("Stato: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.ATTO_STATO == "") "-" else apiAlboEntry.ATTO_STATO, style = MaterialTheme.typography.bodySmall)
+                    }
 
-                }) {
-                    Text(apiAlboEntry.ALLEGATONOMEFILE)
+                    Row {
+                        Text("Fine validità: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.DATAFINEVALIDITA == "") "-" else apiAlboEntry.DATAFINEVALIDITA, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Row {
+                        Text("Data autorizzazione: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.DATAAUTORIZZAZIONE == "") "-" else apiAlboEntry.DATAAUTORIZZAZIONE, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Row {
+                        Text("Oggetto: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.OGGETTODOC == "") "-" else apiAlboEntry.OGGETTODOC, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Row {
+                        Text("Tipo documento: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(if (apiAlboEntry.TIPODOC == "") "-" else apiAlboEntry.TIPODOC, style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Button(
+                        onClick = {
+
+                        val url = "http://www.territorio.provincia.tn.it/gco/downloadFile.down?userFromRequestParam=portalpa&qpportal=true&codCompany=PROV_TN&idAllegato=${ apiAlboEntry.DOCUMENTO }&idAtto=${ apiAlboEntry.IDATTO }"
+                        val request: DownloadManager.Request = DownloadManager.Request(Uri.parse(url))
+
+                        with(request) {
+                            setTitle("${ apiAlboEntry.DOCUMENTO }-${ apiAlboEntry.IDATTO }.odt")
+                            setMimeType("application/vnd.oasis.opendocument.text")
+                            setDescription("Downloading atto...")
+                            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                            setDestinationInExternalPublicDir(
+                                Environment.DIRECTORY_DOWNLOADS,
+                                "${ apiAlboEntry.DOCUMENTO }-${ apiAlboEntry.IDATTO }.odt"
+                            )
+                        }
+
+                        val manager: DownloadManager =
+                            localContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                        manager.enqueue(request)
+
+                    }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        Text(apiAlboEntry.ALLEGATONOMEFILE)
+                    }
+
                 }
-            }
 
+            }
         }
     }
 }

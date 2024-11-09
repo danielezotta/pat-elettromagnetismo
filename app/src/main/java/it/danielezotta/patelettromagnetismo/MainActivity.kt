@@ -1,17 +1,20 @@
 package it.danielezotta.patelettromagnetismo
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,10 +36,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModelProvider
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import it.danielezotta.patelettromagnetismo.composables.PermitList
 import it.danielezotta.patelettromagnetismo.ui.theme.PATPermessiElettromagnetismoTheme
 import it.danielezotta.patelettromagnetismo.viewmodels.MainViewModel
+import it.danielezotta.patelettromagnetismo.workers.NotificationWorker
+import java.util.concurrent.TimeUnit
+
+
+val Context.dataStore by preferencesDataStore(name = "preferences")
 
 class MainActivity : ComponentActivity() {
 
@@ -62,9 +75,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Register the permission request callback
+    val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission is granted; proceed with the action
+        } else {
+            // Permission is denied; handle the denial
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        requestNotificationPermission()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
@@ -81,8 +107,9 @@ class MainActivity : ComponentActivity() {
         }
 
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-
         mainViewModel.getPermits()
+
+        scheduleNotificationWork(this, 12)
 
         enableEdgeToEdge()
         setContent {
@@ -112,6 +139,41 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    fun scheduleNotificationWork(context: Context, intervalHours: Long) {
+        val workRequest = PeriodicWorkRequestBuilder<NotificationWorker>(16, TimeUnit.MINUTES)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "notificationWork",
+            ExistingPeriodicWorkPolicy.REPLACE,
+            workRequest
+        )
+    }
+
+    // Function to check and request a permission
+    fun checkAndRequestPermission(permission: String) {
+        when {
+            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission is already granted
+            }
+            shouldShowRequestPermissionRationale(permission) -> {
+                // Explain why the permission is needed and then request it
+                requestPermissionLauncher.launch(permission)
+            }
+            else -> {
+                // Request the permission directly
+                requestPermissionLauncher.launch(permission)
+            }
+        }
+    }
+
+    // Call this function to check a specific permission, e.g., notification permission
+    fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkAndRequestPermission(POST_NOTIFICATIONS)
         }
     }
 }
