@@ -46,7 +46,7 @@ enum class CompanyColor(val color: Color) {
             return when {
                 company.lowercase().contains("tim") -> TIM
                 company.lowercase().contains("vodafone") -> VODAFONE
-                company.lowercase().contains("windtre") -> WINDTRE
+                company.lowercase().contains("wind tre") -> WINDTRE
                 company.lowercase().contains("eolo") -> EOLO
                 company.lowercase().contains("iliad") -> ILIAD
                 company.lowercase().contains("zefiro") -> ZEFIRO

@@ -70,7 +70,7 @@ class NotificationWorker(appContext: Context, workerParams: WorkerParameters) :
 
             val client = HttpClient(CIO) {
                 install(HttpTimeout) {
-                    requestTimeoutMillis = 120000
+                    requestTimeoutMillis = 180000
                 }
                 install(ContentNegotiation) {
                     register(
@@ -101,14 +101,14 @@ class NotificationWorker(appContext: Context, workerParams: WorkerParameters) :
                         lastItem = item.IDATTO.toInt()
                     }
 
-                    if (item.IDATTO.toInt() < lastNotifiedItem) {
+                    if (item.IDATTO.toInt() > lastNotifiedItem) {
                         val notification = NotificationCompat.Builder(applicationContext, channelId)
                             .setContentTitle(item.INDIRIZZO)
                             .setContentText(item.NOMEIMPRESA)
                             .setSmallIcon(it.danielezotta.patelettromagnetismo.R.drawable.ic_stat_notification_icon)
                             .build()
 
-                        notificationManager.notify(1, notification)
+                        notificationManager.notify((0..1000).random(), notification)
                     }
                 }
 
