@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
         mainViewModel.getPermits()
 
-        scheduleNotificationWork(this, 12)
+        scheduleNotificationWork(this, 4)
 
         enableEdgeToEdge()
         setContent {

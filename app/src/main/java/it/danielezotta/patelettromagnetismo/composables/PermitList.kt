@@ -62,7 +62,9 @@ fun PermitList(mainViewModel: MainViewModel) {
                         Text("Errore durante il caricamento", style = MaterialTheme.typography.bodySmall)
                         Text("La richiesta ha superato il tempo massimo di attesa", style = MaterialTheme.typography.bodySmall)
 
-                        Button(onClick = { mainViewModel.getPermits() }) {
+                        Button(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            onClick = { mainViewModel.getPermits() }) {
                             Text("Riprova")
                         }
                     }
