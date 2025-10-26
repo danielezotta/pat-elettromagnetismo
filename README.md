@@ -1,7 +1,7 @@
 ## PAT Elettromagnetismo
 
+<img width="200" alt="Screenshot_20251026_175725" src="https://github.com/user-attachments/assets/e23fb106-73d3-4a9f-a742-0d4689a37afe" />
 
-<img src="https://github.com/user-attachments/assets/7c6910c0-24d1-4cd0-8537-a322ad83b54a" alt="Application Screen" width="200"/>
 
 \
 This application has been created to monitor all the Eletromagnetic permits in the Autonomous Province of Trento.
