@@ -20,33 +20,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.danielezotta.patelettromagnetismo.viewmodels.MainViewModel
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Error
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 
 @Composable
-fun PermitList(mainViewModel: MainViewModel) {
+fun PermitList(
+    mainViewModel: MainViewModel,
+    onDocumentClick: (url: String, title: String) -> Unit
+) {
 
     val permits = mainViewModel.permits.collectAsState()
-    var loadingState = mainViewModel.loadingState.collectAsState()
+    val loadingState = mainViewModel.loadingState.collectAsState()
 
     LazyColumn (
-        modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 0.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(permits.value) { permit ->
-            PermitCardItem(permit)
+            PermitCardItem(
+                apiAlboEntry = permit,
+                onDocumentClick = onDocumentClick
+            )
 
             if (permits.value.last() == permit && loadingState.value == MainViewModel.LoadingState.LOADED) {
                 mainViewModel.loadMorePermits()
             }
         }
 
-        item {
-            AnimatedVisibility(loadingState.value == MainViewModel.LoadingState.LOADING) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+        if (loadingState.value == MainViewModel.LoadingState.LOADING) {
+            items(5) {
+                PermitCardPlaceholder()
             }
         }
 
@@ -56,16 +66,22 @@ fun PermitList(mainViewModel: MainViewModel) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column (
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        colors = CardDefaults.elevatedCardColors(),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text("Errore durante il caricamento", style = MaterialTheme.typography.bodySmall)
-                        Text("La richiesta ha superato il tempo massimo di attesa", style = MaterialTheme.typography.bodySmall)
-
-                        Button(
-                            modifier = Modifier.padding(bottom = 8.dp),
-                            onClick = { mainViewModel.getPermits() }) {
-                            Text("Riprova")
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Outlined.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Text("Errore durante il caricamento", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("La richiesta ha superato il tempo massimo di attesa.", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(onClick = { mainViewModel.getPermits() }) {
+                                Text("Riprova")
+                            }
                         }
                     }
                 }

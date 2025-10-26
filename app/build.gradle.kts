@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "it.danielezotta.patelettromagnetismo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "it.danielezotta.patelettromagnetismo"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 4
-        versionName = "1.1.1"
+        targetSdk = 36
+        versionCode = 5
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

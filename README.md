@@ -11,3 +11,6 @@ The list mainly includes permissions to improve the 4G / 5G network.
 ### Tecnologies
 
 Created from scratch with Api 35 and Jetpack Compose
+
+From version 1.2.0 (version code 5), new functions have been experimented with using AI.
+This has been done to check what can be done with AI on an already existing project.
