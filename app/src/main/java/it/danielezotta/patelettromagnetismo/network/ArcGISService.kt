@@ -302,14 +302,17 @@ class ArcGISService(private val httpClient: HttpClient) {
     suspend fun getCEMAttachments(objectId: Int): AttachmentResponse? {
         return try {
             val url = "$BASE_URL/$MISURE_CEM_SERVICE/FeatureServer/0/queryAttachments"
+            android.util.Log.d("ArcGIS", "Getting attachments for CEM $objectId from: $url")
             val response: HttpResponse = httpClient.get(url) {
                 parameter("f", "json")
                 parameter("objectIds", objectId)
                 parameter("returnMetadata", true)
             }
             val json = response.bodyAsText()
+            android.util.Log.d("ArcGIS", "Attachment response JSON: $json")
             Json.decodeFromString<AttachmentResponse>(json)
         } catch (e: Exception) {
+            android.util.Log.e("ArcGIS", "Error getting CEM attachments", e)
             null
         }
     }
@@ -317,9 +320,11 @@ class ArcGISService(private val httpClient: HttpClient) {
     suspend fun getCEMAttachmentUrl(objectId: Int, attachmentId: Int): String? {
         return try {
             val url = "$BASE_URL/$MISURE_CEM_SERVICE/FeatureServer/0/$objectId/attachments/$attachmentId"
-            // Return the direct download URL
-            url
+            android.util.Log.d("ArcGIS", "Generated attachment URL: $url")
+            // Return the direct download URL with width parameter for better display
+            "$url?w=1080"
         } catch (e: Exception) {
+            android.util.Log.e("ArcGIS", "Error generating CEM attachment URL", e)
             null
         }
     }

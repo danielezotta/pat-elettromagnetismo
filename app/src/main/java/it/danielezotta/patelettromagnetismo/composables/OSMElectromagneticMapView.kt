@@ -47,8 +47,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.compose.SubcomposeAsyncImage
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
@@ -351,6 +362,7 @@ private fun buildCEMDetails(misura: MisuraCEM): List<Pair<String, String>> = bui
     line("Quota terreno", misura.quotaTerr)
     line("Grafico", misura.grafico)
     if (misura.anno != null) add("Anno" to misura.anno.toString())
+    add("Object ID" to misura.objectId.toString())
     if (misura.geometry != null) add("Coordinate" to "${misura.geometry.y}, ${misura.geometry.x}")
 }
 
@@ -595,12 +607,15 @@ fun OSMElectromagneticMapView(
     var isSatellite by remember { mutableStateOf(false) }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
     var selectedMarker by remember { mutableStateOf<Triple<String, List<Pair<String,String>>, Int?>?>(null) } // title, details, objectId
+    var selectedMarkerIsSRB by remember { mutableStateOf<Boolean>(false) }
     var relatedRecords by remember { mutableStateOf<List<ImpiantoDetail>>(emptyList()) }
     var isLoadingDetails by remember { mutableStateOf(false) }
     var directionOverlayTrigger by remember { mutableStateOf<Triple<Int, List<ImpiantoDetail>, Set<Int>>?>(null) }
     var hiddenOperatorIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var cemAttachmentUrl by remember { mutableStateOf<String?>(null) }
     var isLoadingChart by remember { mutableStateOf(false) }
+    var showImagePreview by remember { mutableStateOf(false) }
+    var previewImageUrl by remember { mutableStateOf<String?>(null) }
 
     val searchQuery by pendingMapSearch.collectAsState()
     LaunchedEffect(searchQuery) {
@@ -873,7 +888,7 @@ fun OSMElectromagneticMapView(
                         cemAttachmentUrl = attachmentUrl
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    android.util.Log.e("CEMAttachment", "Error loading CEM attachment", e)
                 } finally {
                     isLoadingChart = false
                 }
@@ -949,8 +964,10 @@ fun OSMElectromagneticMapView(
                     directionOverlayTrigger = directionOverlayTrigger?.let { Triple(it.first, it.second, hiddenOperatorIds) },
                     onMapViewCreated = { mapViewRef = it },
                     onMarkerClick = { title, details, objectId, isSRB ->
-                        val newObjectId = if (isSRB) objectId else null
+                        val isCEMMarker = title.contains("Misura CEM") || details.any { it.first == "Grafico" }
+                        val newObjectId = if (isSRB || isCEMMarker) objectId else null // Keep for SRB and CEM, null for RTV
                         selectedMarker = Triple(title, details, newObjectId)
+                        selectedMarkerIsSRB = isSRB
                         if (!isSRB) relatedRecords = emptyList()
                     }
                 )
@@ -1033,27 +1050,42 @@ fun OSMElectromagneticMapView(
                         details = details,
                         relatedRecords = relatedRecords,
                         isLoadingDetails = isLoadingDetails,
-                        isSRB = objectId != null,
+                        isSRB = selectedMarkerIsSRB,
                         hiddenOperatorIds = hiddenOperatorIds,
                         cemAttachmentUrl = cemAttachmentUrl,
                         isLoadingChart = isLoadingChart,
-                        onToggleOperator = { opId ->
-                            hiddenOperatorIds = if (opId in hiddenOperatorIds)
-                                hiddenOperatorIds - opId
-                            else
-                                hiddenOperatorIds + opId
-                            val trigger = directionOverlayTrigger
-                            if (trigger != null)
-                                directionOverlayTrigger = Triple(trigger.first, trigger.second, hiddenOperatorIds)
+                        onToggleOperator = { operatorId ->
+                            hiddenOperatorIds = if (operatorId in hiddenOperatorIds) {
+                                hiddenOperatorIds - operatorId
+                            } else {
+                                hiddenOperatorIds + operatorId
+                            }
                         },
                         onDismiss = {
                             selectedMarker = null
+                            selectedMarkerIsSRB = false
+                            cemAttachmentUrl = null
                             directionOverlayTrigger = null
+                        },
+                        onImagePreview = { url ->
+                            previewImageUrl = url
+                            showImagePreview = true
                         }
                     )
                 }
             }
         }
+    }
+
+    // Image Preview Modal
+    if (showImagePreview && previewImageUrl != null) {
+        ImagePreviewDialog(
+            imageUrl = previewImageUrl!!,
+            onDismiss = { 
+                showImagePreview = false
+                previewImageUrl = null
+            }
+        )
     }
 }
 
@@ -1067,8 +1099,11 @@ private fun MarkerDetailsPanel(
     hiddenOperatorIds: Set<Int> = emptySet(),
     cemAttachmentUrl: String? = null,
     isLoadingChart: Boolean = false,
+    showImagePreview: Boolean = false,
+    previewImageUrl: String? = null,
     onToggleOperator: (Int) -> Unit = {},
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onImagePreview: (String) -> Unit = {}
 ) {
     Surface(
         modifier = Modifier
@@ -1223,7 +1258,7 @@ private fun MarkerDetailsPanel(
                 }   // end if isSRB
 
                 // CEM Chart display
-                if (!isSRB && cemAttachmentUrl != null) {
+                if (!isSRB && title.contains("Misura CEM") || details.any { it.first == "Grafico" }) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Grafico Misura CEM",
@@ -1237,23 +1272,80 @@ private fun MarkerDetailsPanel(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Caricamento grafico...", style = MaterialTheme.typography.bodySmall)
                         }
-                    } else {
+                    } else if (cemAttachmentUrl != null) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1.2f),
+                                .height(200.dp),
                             shape = MaterialTheme.shapes.small,
                             tonalElevation = 2.dp
                         ) {
-                            AsyncImage(
+                            SubcomposeAsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
                                     .data(cemAttachmentUrl)
                                     .crossfade(true)
                                     .build(),
                                 contentDescription = "Grafico misura CEM",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                cemAttachmentUrl?.let { url ->
+                                                    onImagePreview(url)
+                                                }
+                                            }
+                                        )
+                                    },
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                loading = {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                },
+                                error = {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Error",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                            Text(
+                                                text = "Errore caricamento grafico",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
                             )
+                        }
+                    } else {
+                        // No attachment available
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            shape = MaterialTheme.shapes.small,
+                            tonalElevation = 1.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = "No attachment",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Nessun grafico disponibile per questa misura",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -1444,5 +1536,113 @@ private suspend fun updateMapOverlays(
             mapView.controller.setCenter(GeoPoint(41.9028, 12.4964))
             mapView.controller.setZoom(6.0)
         }
+    }
+}
+
+@Composable
+private fun ImagePreviewDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black)
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, zoom, rotation ->
+                    val oldScale = scale
+                    val newScale = (scale * zoom).coerceIn(0.5f, 5f)
+                    
+                    // Calculate offset to keep the zoom centered on the gesture centroid
+                    val newOffsetX = (offsetX + centroid.x) * (newScale / oldScale) - centroid.x + pan.x * newScale
+                    val newOffsetY = (offsetY + centroid.y) * (newScale / oldScale) - centroid.y + pan.y * newScale
+                    
+                    scale = newScale
+                    offsetX = newOffsetX
+                    offsetY = newOffsetY
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    if (scale > 1f) {
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // Close button
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                    shape = MaterialTheme.shapes.small
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        // Image with zoom and pan
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = "Preview grafico CEM",
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY
+                ),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            loading = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Error",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = "Errore caricamento immagine",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                    }
+                }
+            }
+        )
     }
 }
