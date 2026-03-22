@@ -399,7 +399,6 @@ private object OdtToHtmlConverter {
                         }
                         "tab" -> sb.append("&nbsp;&nbsp;&nbsp;&nbsp;") // approximate tab as 4 spaces
                         "line-break" -> sb.append("<br/>")
-                        "soft-page-break" -> { /* handled above */ }
                         "image" -> {
                             // Image is inside a frame, we'll handle it when we close the frame
                             // Store href for later use

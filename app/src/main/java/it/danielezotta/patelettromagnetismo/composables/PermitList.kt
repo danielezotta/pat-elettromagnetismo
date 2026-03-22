@@ -33,9 +33,9 @@ import androidx.compose.foundation.layout.height
 @Composable
 fun PermitList(
     mainViewModel: MainViewModel,
+    onShowOnMap: (query: String) -> Unit = {},
     onDocumentClick: (url: String, title: String) -> Unit
 ) {
-
     val permits = mainViewModel.permits.collectAsState()
     val loadingState = mainViewModel.loadingState.collectAsState()
 
@@ -46,6 +46,7 @@ fun PermitList(
         items(permits.value) { permit ->
             PermitCardItem(
                 apiAlboEntry = permit,
+                onShowOnMap = onShowOnMap,
                 onDocumentClick = onDocumentClick
             )
 

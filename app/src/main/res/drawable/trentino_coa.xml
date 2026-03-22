@@ -1117,7 +1117,7 @@
       <gradient 
           android:centerX="141.28"
           android:centerY="482.72"
-          android:gradientRadius="0"
+          android:gradientRadius="1"
           android:type="radial">
         <item android:offset="0" android:color="#FFFFDB7D"/>
         <item android:offset="1" android:color="#FFEFBA3C"/>
@@ -1192,7 +1192,7 @@
       <gradient 
           android:centerX="193.95"
           android:centerY="302.84"
-          android:gradientRadius="0"
+          android:gradientRadius="1"
           android:type="radial">
         <item android:offset="0" android:color="#FFFFDB7D"/>
         <item android:offset="1" android:color="#FFEFBA3C"/>

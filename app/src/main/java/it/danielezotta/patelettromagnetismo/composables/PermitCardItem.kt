@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,7 +38,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -47,17 +50,19 @@ enum class CompanyColor(val color: Color) {
     EOLO(Color(0x8000AEEF)), // Light Blue
     ILIAD(Color(0x80D52B1E)), // Red
     ZEFIRO(Color(0x804ccbda)), // Light Blue
+    FASTWEB(Color(0x80fdc400)), // Light Blue
     GENERIC(Color(0x80808080)); // Default Gray
 
     companion object {
         fun fromCompany(company: String): CompanyColor {
             return when {
-                company.lowercase().contains("tim") -> TIM
+                company.lowercase().contains("tim") || company.lowercase().contains("telecom italia") -> TIM
                 company.lowercase().contains("vodafone") -> VODAFONE
                 company.lowercase().contains("wind tre") -> WINDTRE
                 company.lowercase().contains("eolo") -> EOLO
                 company.lowercase().contains("iliad") -> ILIAD
                 company.lowercase().contains("zefiro") -> ZEFIRO
+                company.lowercase().contains("fastweb") -> FASTWEB
                 else -> GENERIC
             }
         }
@@ -166,14 +171,14 @@ private fun DetailRow(label: String, value: String) {
 @Composable
 fun PermitCardItem(
     apiAlboEntry: ApiAlboEntry,
+    onCardClick: () -> Unit = {},
+    onShowOnMap: (query: String) -> Unit = {},
     onDocumentClick: (url: String, title: String) -> Unit
 ) {
     val expanded = rememberSaveable { mutableStateOf(false) }
 
     ElevatedCard(
-        onClick = {
-            expanded.value = !expanded.value
-        },
+        onClick = { expanded.value = !expanded.value },
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large
     ) {
@@ -184,80 +189,91 @@ fun PermitCardItem(
                 .height(4.dp)
                 .background(CompanyColor.fromCompany(apiAlboEntry.NOMEIMPRESA).color)
         )
-        
+
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
                 text = apiAlboEntry.INDIRIZZO,
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.semantics { heading() }
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedVisibility(expanded.value) {
-                    Row {
-                        Text("Comune: ", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                }
-                Text(apiAlboEntry.COMUNE_INDI, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = apiAlboEntry.COMUNE_INDI,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedVisibility(expanded.value) {
-                    Row {
-                        Text("Operatore: ", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                }
-                Text(apiAlboEntry.NOMEIMPRESA, style = MaterialTheme.typography.bodyMedium)
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedVisibility(expanded.value) {
-                    Row {
-                        Text("Inizio validità: ", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                }
-                Text(apiAlboEntry.DATAINIZIOVALIDITA, style = MaterialTheme.typography.bodyMedium)
-            }
-
-            AnimatedVisibility(
-                expanded.value,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = apiAlboEntry.NOMEIMPRESA,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = apiAlboEntry.DATAINIZIOVALIDITA,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
+            AnimatedVisibility(expanded.value) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                    DetailRow(label = "Documento", value = apiAlboEntry.DOCUMENTO.ifEmpty { "-" })
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(onClick = {
+                            val query = apiAlboEntry.COMUNE_INDI
+                            onShowOnMap(query)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Place,
+                                contentDescription = "Vedi sulla mappa",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(
+                            text = "Vedi sulla mappa",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     DetailRow(label = "Stato", value = apiAlboEntry.ATTO_STATO.ifEmpty { "-" })
                     DetailRow(label = "Fine validità", value = apiAlboEntry.DATAFINEVALIDITA.ifEmpty { "-" })
                     DetailRow(label = "Data autorizzazione", value = apiAlboEntry.DATAAUTORIZZAZIONE.ifEmpty { "-" })
-                    DetailRow(label = "Oggetto", value = apiAlboEntry.OGGETTODOC.ifEmpty { "-" })
                     DetailRow(label = "Tipo documento", value = apiAlboEntry.TIPODOC.ifEmpty { "-" })
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    
-                    FilledTonalButton(
-                        onClick = {
-                            val url = "http://www.territorio.provincia.tn.it/gco/downloadFile.down?userFromRequestParam=portalpa&qpportal=true&codCompany=PROV_TN&idAllegato=${apiAlboEntry.DOCUMENTO}&idAtto=${apiAlboEntry.IDATTO}"
-                            onDocumentClick(url, apiAlboEntry.ALLEGATONOMEFILE)
-                        },
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    ) {
-                        Text(
-                            text = apiAlboEntry.ALLEGATONOMEFILE,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    DetailRow(label = "Oggetto", value = apiAlboEntry.OGGETTODOC.ifEmpty { "-" })
+                    DetailRow(label = "Documento", value = apiAlboEntry.DOCUMENTO.ifEmpty { "-" })
+                    if (apiAlboEntry.ALLEGATONOMEFILE.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                val url = "http://www.territorio.provincia.tn.it/gco/downloadFile.down?userFromRequestParam=portalpa&qpportal=true&codCompany=PROV_TN&idAllegato=${apiAlboEntry.DOCUMENTO}&idAtto=${apiAlboEntry.IDATTO}"
+                                onDocumentClick(url, apiAlboEntry.ALLEGATONOMEFILE)
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(
+                                text = apiAlboEntry.ALLEGATONOMEFILE,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
-
                 }
-
             }
         }
     }

@@ -10,6 +10,7 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -20,6 +21,7 @@ import io.ktor.serialization.kotlinx.KotlinxSerializationConverter
 import it.danielezotta.patelettromagnetismo.dataStore
 import it.danielezotta.patelettromagnetismo.models.ApiAlboEntry
 import it.danielezotta.patelettromagnetismo.models.ApiResponse
+import it.danielezotta.patelettromagnetismo.network.ArcGISService
 import it.danielezotta.patelettromagnetismo.util.AppConstants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +39,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var _loadingState = MutableStateFlow(LoadingState.IDLE)
     val loadingState = _loadingState.asStateFlow()
 
+    private val _pendingMapSearch = MutableStateFlow<String?>(null)
+    val pendingMapSearch = _pendingMapSearch.asStateFlow()
+
+    fun searchOnMap(query: String) {
+        _pendingMapSearch.value = query
+    }
+
+    fun clearMapSearch() {
+        _pendingMapSearch.value = null
+    }
+
+    private val httpClient = HttpClient(CIO) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 120000
+        }
+        install(ContentNegotiation) {
+            register(
+                ContentType.Text.Any, KotlinxSerializationConverter(
+                    Json {
+                        prettyPrint = true
+                        isLenient = true
+                        ignoreUnknownKeys = true
+                    }
+                )
+            )
+        }
+        install(Logging)
+    }
+
+    val arcGISService = ArcGISService(httpClient)
+
     fun getPermits() {
 
         _loadingState.value = LoadingState.LOADING
@@ -45,24 +78,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
 
-                val client = HttpClient(CIO) {
-                    install(HttpTimeout) {
-                        requestTimeoutMillis = 120000
-                    }
-                    install(ContentNegotiation) {
-                        register(
-                            ContentType.Text.Any, KotlinxSerializationConverter(
-                                Json {
-                                    prettyPrint = true
-                                    isLenient = true
-                                    ignoreUnknownKeys = true
-                                }
-                            )
-                        )
-                    }
-                }
-
-                val response: ApiResponse = client.post(AppConstants.PERMITS_URL + "&page=${_page.value}") {
+                val response: ApiResponse = httpClient.post(AppConstants.PERMITS_URL + "&page=${_page.value}") {
                     contentType(ContentType.Application.FormUrlEncoded)
                     setBody(FormDataContent(Parameters.build {
 
